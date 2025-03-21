@@ -5,42 +5,74 @@ on:
     branches:
       - master
 
+permissions:
+  contents: write
+
 jobs:
-  teg:
+#  tag:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: 检出代码
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0  # 获取完整提交历史，以便计算 tag
+#
+#      - name: 计算新的版本号
+#        id: version
+#        run: |
+#          # 获取最近的 tag
+#          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+#          echo "最新的 tag: $LATEST_TAG"
+#
+#          # 提取 major、minor、patch 版本号
+#          VERSION_REGEX="v([0-9]+)\.([0-9]+)\.([0-9]+)$"
+#          if [[ "$LATEST_TAG" =~ $VERSION_REGEX ]]; then
+#            MAJOR=${BASH_REMATCH[1]}
+#            MINOR=${BASH_REMATCH[2]}
+#            PATCH=${BASH_REMATCH[3]}
+#          else
+#            MAJOR=0
+#            MINOR=0
+#            PATCH=0
+#          fi
+#
+#          # 递增 patch 版本号
+#          NEW_TAG="v$MAJOR.$MINOR.$((PATCH+1))"
+#          echo "新的 tag: $NEW_TAG"
+#
+#          # 输出新的 tag 供后续步骤使用
+#          echo "new_tag=$NEW_TAG" >> $GITHUB_ENV
+#
+#      - name: 创建并推送新的 Tag
+#        run: |
+#          git tag $new_tag
+#          git push origin $new_tag
+  create-tag:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # 获取完整提交历史，以便计算 tag
 
-      - name: 计算新的版本号
-        id: version
+      - name: 安装 jq
+        run: sudo apt-get install -y jq
+
+      - name: 从 composer.json 读取版本号
+        id: get_version
+        run: echo "VERSION=$(jq -r '.version' composer.json)" >> $GITHUB_ENV
+
+      - name: 检查 tag 是否存在
+        id: check_tag
         run: |
-          # 获取最近的 tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "最新的 tag: $LATEST_TAG"
-         
-          # 提取 major、minor、patch 版本号
-          VERSION_REGEX="v([0-9]+)\.([0-9]+)\.([0-9]+)$"
-          if [[ "$LATEST_TAG" =~ $VERSION_REGEX ]]; then
-            MAJOR=${BASH_REMATCH[1]}
-            MINOR=${BASH_REMATCH[2]}
-            PATCH=${BASH_REMATCH[3]}
+          TAG_EXISTS=$(git ls-remote --tags origin refs/tags/${{ env.VERSION }} | wc -l)
+          if [ "$TAG_EXISTS" -ne 0 ]; then
+            echo "Tag ${{ env.VERSION }} already exists. Skipping."
+            echo "SKIP=true" >> $GITHUB_ENV
           else
-            MAJOR=0
-            MINOR=0
-            PATCH=0
+            echo "SKIP=false" >> $GITHUB_ENV
           fi
-         
-          # 递增 patch 版本号
-          NEW_TAG="v$MAJOR.$MINOR.$((PATCH+1))"
-          echo "新的 tag: $NEW_TAG"
-         
-          # 输出新的 tag 供后续步骤使用
-          echo "new_tag=$NEW_TAG" >> $GITHUB_ENV
 
-      - name: 创建并推送新的 Tag
+      - name: 创建并推送新的 tag
+        if: env.SKIP == 'false'
         run: |
-          git tag $new_tag
-          git push origin $new_tag
+          git tag ${{ env.VERSION }}
+          git push origin ${{ env.VERSION }}
