@@ -1,0 +1,14 @@
+{
+    "name": "root/test_action_tag",
+    "autoload": {
+        "psr-4": {
+            "Root\\TestActionTag\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "1"
+        }
+    ],
+    "require": {}
+}
