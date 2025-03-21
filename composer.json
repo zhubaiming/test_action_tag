@@ -1,5 +1,6 @@
 {
     "name": "root/test_action_tag",
+    "version": "v0.0.2",
     "autoload": {
         "psr-4": {
             "Root\\TestActionTag\\": "src/"
